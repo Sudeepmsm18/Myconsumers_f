@@ -1,12 +1,78 @@
 {
-  "name": "kanban_board",
-  "version": "0.0.1",
-  "size": {
-    "width": 3,
-    "height": 3
-  },
-  "mapping": [],
-  "collections": [],
-  "workflowMapping": [],
-  "packagesMapping": []
+   "name": "Kanban",
+   "version": "0.0.1",
+   "size": {
+      "width": 3,
+      "height": 3
+   },
+   "packagesMapping": [],
+   "fileName": "manifest.json",
+   "datasetsMapping": [],
+   "collectionsMapping": [
+      {
+         "id": "ca6c4d9b-dee6-4091-8f0e-8a60085a4d71",
+         "name": "kanban_project",
+         "syncEnabled": false
+      },
+      {
+         "id": "c290f37c-a809-4659-9274-8a0efe9b321f",
+         "name": "kanban_task",
+         "syncEnabled": false
+      }
+   ],
+   "workflowsMapping": [
+      {
+         "startName": "Start kanban",
+         "alias": "kanban",
+         "modelId": "6018a76b-7ed9-4d0e-9bc8-9feb5be4ca35",
+         "parameters": [
+            {
+               "name": "Body",
+               "displayName": "Body",
+               "subString": null,
+               "type": "text",
+               "visible": true,
+               "value": null,
+               "required": true,
+               "isList": false,
+               "children": [],
+               "nullable": false,
+               "entitySubType": null,
+               "aliasedName": "body"
+            },
+            {
+               "name": "Subject",
+               "displayName": "Subject",
+               "subString": null,
+               "type": "text",
+               "visible": true,
+               "value": null,
+               "required": true,
+               "isList": false,
+               "children": [],
+               "nullable": false,
+               "entitySubType": null,
+               "aliasedName": "subject"
+            },
+            {
+               "name": "To",
+               "displayName": "To",
+               "subString": null,
+               "type": "text",
+               "visible": true,
+               "value": null,
+               "required": true,
+               "isList": false,
+               "children": [],
+               "nullable": false,
+               "entitySubType": null,
+               "aliasedName": "to"
+            }
+         ],
+         "version": "1.0.1"
+      }
+   ],
+   "id": "86dc7f75-a9de-4dc1-8117-f46694130404",
+   "proxyId": "28ec1c6a-c6f0-4fa0-8993-63f9ec0f566c",
+   "fullpage": true
 }

@@ -236,9 +236,8 @@ const UploadRevision = (file, fileId) => {
 
 const GetFile = (fileId, revisionId) => {
   const options = { responseType: "blob" };
-  const url = `/domo/data-files/v1/${fileId}${
-    revisionId ? `/revisions/${revisionId}` : ""
-  }`;
+  const url = `/domo/data-files/v1/${fileId}${revisionId ? `/revisions/${revisionId}` : ""
+    }`;
   return domo
     .get(url, options)
     .then((data) => data)

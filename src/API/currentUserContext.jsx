@@ -1,6 +1,6 @@
 /* eslint-disable react/prop-types */
 import { createContext, useState, useEffect } from "react";
-import DomoApi from "./DomoAPI";
+import DomoApi from "./domoAPI";
 
 export const UserContext = createContext();
 
@@ -16,13 +16,13 @@ export const UserProvider = ({ children }) => {
 
     DomoApi.GetCurrentUser().then((data) => {
       // console.log("User Data",data);
-      
+
       if (!isUserFetched) {
         const userId = data?.userId;
         const displayName = data?.displayName;
         const avatarKey = data?.avatarKey;
-        const customer=data?.customer;
-        const host=data?.host;
+        const customer = data?.customer;
+        const host = data?.host;
 
         setCurrentUser(displayName || "");
         setCurrentUserId(userId || "");
