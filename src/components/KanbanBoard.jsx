@@ -118,18 +118,6 @@ const KanbanBoard = ({
     const updatedMembers = [...currentMembers, newMember];
 
     await handleUpdateProject({ ...project, members: updatedMembers });
-
-    // Send notification to the newly added member
-    if (newMember.email) {
-      const creatorName =
-        currentUser?.displayName || currentUser?.userName || 'a team member';
-      startWorkflow({
-        To: newMember.email,
-        Subject: `Added to Project: ${project.project_name}`,
-        Body: `Hi ${newMember.name},\n\nYou have been added to the project "${project.project_name}" by ${creatorName}.\n\nYou can now collaborate on tasks and track progress in the workspace.\n\nBest regards,\nKanban Flow`,
-      }).catch((err) => console.error('Project addition email failed', err));
-    }
-
     setMemberSearchTerm('');
   };
 

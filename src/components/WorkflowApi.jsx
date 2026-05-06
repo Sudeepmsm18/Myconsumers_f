@@ -5,9 +5,9 @@ const WORKFLOW_ALIAS = "kanban";
 export const startWorkflow = async ({ Body, Subject, To }) => {
   try {
     const payload = {
-      body: Body,
-      subject: Subject,
-      to: To
+      Body,
+      Subject,
+      To
     };
 
     const instance = await domo.post(

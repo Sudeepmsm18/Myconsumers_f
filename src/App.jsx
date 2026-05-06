@@ -48,7 +48,15 @@ function App() {
           const found = res.find(doc => doc.id === savedProjectId);
           if (found) {
             const { _id: legacyId, id: contentId, ...rest } = found.content || {};
-            setCurrentProject({ ...rest, id: found.id || legacyId || contentId });
+            const normalized = { ...rest, id: found.id || legacyId || contentId };
+            
+            // Only restore if approved
+            if (String(normalized.admin_aproval) === "true") {
+              setCurrentProject(normalized);
+            } else {
+              console.warn("Project pending approval or rejected, clearing selection");
+              localStorage.removeItem("lastProjectSelection");
+            }
           }
         } catch (err) {
           console.warn("Could not restore saved project session:", err);

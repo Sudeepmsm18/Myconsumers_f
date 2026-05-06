@@ -26,10 +26,49 @@ const ProjectSelection = ({ onSelectProject, currentUser, domoUsers, isDarkMode,
     const loadProjects = async () => {
         setLoading(true);
         try {
-            const res = await DomoApi.ListDocuments(PROJECT_COLLECTION);
+            const currentUserId = currentUser?.userId || currentUser?.id;
+            const currentUserName = currentUser?.displayName || currentUser?.userName || "";
+
+            const query = {
+                "$and": [
+                    { "content.admin_aproval": { "$in": ["true", true] } },
+                    {
+                        "$or": [
+                            { "content.created_by_id": { "$in": [currentUserId, String(currentUserId), Number(currentUserId)] } },
+                            { "content.created_by": currentUserName },
+                            { "content.members.id": { "$in": [currentUserId, String(currentUserId), Number(currentUserId)] } }
+                        ]
+                    }
+                ]
+            };
+
+            const res = await DomoApi.QueryDocument(PROJECT_COLLECTION, query);
             const data = Array.isArray(res) ? res.map(doc => {
-                const { _id: legacyId, id: contentId, ...rest } = doc.content || {};
-                return { ...rest, id: doc.id || legacyId || contentId };
+                let content = doc.content || {};
+
+                // Parse nested Agent_Result if it exists as a JSON string
+                if (content.Agent_Result) {
+                    try {
+                        const parsed = typeof content.Agent_Result === 'string'
+                            ? JSON.parse(content.Agent_Result)
+                            : content.Agent_Result;
+                        content = { ...content, ...parsed };
+                    } catch (e) {
+                        console.error("Error parsing Agent_Result for doc:", doc.id, e);
+                    }
+                }
+
+                const { _id: legacyId, id: contentId, ...rest } = content;
+                return {
+                    ...rest,
+                    id: doc.id || legacyId || contentId,
+                    admin_aproval: rest.admin_approval || rest.admin_aproval || "pending",
+                    project_name: rest.project_name || "Unnamed Project",
+                    created_by: rest.created_by || "System",
+                    createdAt: rest.createdAt || rest.created_date || doc.createdOn || new Date().toISOString(),
+                    updatedAt: rest.updatedAt || doc.updatedOn,
+                    members: rest.members || []
+                };
             }) : [];
             setProjects(data);
         } catch (error) {
@@ -56,7 +95,7 @@ const ProjectSelection = ({ onSelectProject, currentUser, domoUsers, isDarkMode,
                 // New members are those in the current list but not in the original list
                 newlyAddedMembers = editingProject.members.filter(m => !originalMemberIds.includes(String(m.id)));
 
-                const { id: _omitId, _id: _omitLegacy, ...rest } = editingProject || {};
+                const { id: _omitId, _id: _omitLegacy, Agent_Result: _omitAgent, ...rest } = editingProject || {};
                 await DomoApi.UpdateDocument(PROJECT_COLLECTION, editingProject.id, {
                     ...rest,
                     updatedAt: new Date().toISOString()
@@ -68,24 +107,12 @@ const ProjectSelection = ({ onSelectProject, currentUser, domoUsers, isDarkMode,
                     created_by_id: currentUser?.userId || currentUser?.id,
                     created_by_email: currentUser?.detail?.email || currentUser?.emailAddress || currentUser?.email || "",
                     createdAt: new Date().toISOString(),
-                    columns: [{ key: "todo", label: "Todo" }]
+                    columns: [{ key: "todo", label: "Todo" }],
+                    admin_aproval: "false" // Default to false for admin approval
                 };
                 await DomoApi.CreateDocument(PROJECT_COLLECTION, projectData);
                 newlyAddedMembers = projectData.members || [];
                 projectToSave.project_name = projectData.project_name; // For email context
-            }
-
-            // Send greeting emails to newly added members
-            if (newlyAddedMembers.length > 0) {
-                newlyAddedMembers.forEach(member => {
-                    if (member.email) {
-                        startWorkflow({
-                            To: member.email,
-                            Subject: `Involved in Project: ${projectToSave.project_name}`,
-                            Body: `Hi ${member.name || 'Team Member'},\n\nYou have been involved in the project "${projectToSave.project_name}" by ${creatorName}.\n\nGood luck with your tasks!\n\nBest regards,\nKanban Flow`
-                        }).catch(err => console.error("Notification email failed for", member.email, err));
-                    }
-                });
             }
 
             setIsModalOpen(false);
@@ -119,7 +146,8 @@ const ProjectSelection = ({ onSelectProject, currentUser, domoUsers, isDarkMode,
         const isCreator = String(p.created_by_id) === String(currentUser?.userId || currentUser?.id) ||
             String(p.created_by || '').trim().toLowerCase() === String(currentUser?.displayName || currentUser?.userName || '').trim().toLowerCase();
         const isMember = p.members?.some(m => String(m.id) === String(currentUser?.userId || currentUser?.id));
-        return isCreator || isMember;
+        const isApproved = String(p.admin_aproval) === "true";
+        return (isCreator || isMember) && isApproved;
     });
 
     const filteredProjects = userProjects.filter(p =>
@@ -270,23 +298,30 @@ const ProjectSelection = ({ onSelectProject, currentUser, domoUsers, isDarkMode,
                                     <div className="absolute top-0 right-0 w-32 h-32 bg-primary/5 rounded-full -mr-16 -mt-16 blur-3xl group-hover:bg-primary/20 transition-all" />
 
                                     <div>
-                                        <div className="flex items-center gap-3 mb-6">
-                                            <div className="w-12 h-12 bg-secondary dark:bg-white/5 rounded-2xl flex items-center justify-center text-foreground shadow-inner">
-                                                <Layout size={20} className="group-hover:text-primary transition-colors" />
-                                            </div>
-                                            <div className="bg-primary/10 text-primary text-[9px] font-black uppercase tracking-[0.2em] px-3 py-1.5 rounded-full">
-                                                Workspace
-                                            </div>
-                                        </div>
-                                        <h3 className="text-2xl font-black text-foreground mb-2 group-hover:text-primary transition-colors leading-tight">
+                                        <h3 className="text-xl font-black text-foreground mb-2 group-hover:text-primary transition-colors leading-tight">
                                             {project.project_name}
                                         </h3>
-                                        <p className="text-sm text-muted-foreground/60 font-medium line-clamp-2 italic">
-                                            Created by {project.created_by}
-                                        </p>
+                                        <div className="flex flex-col gap-1 mb-3">
+                                            {(project.created_date || project.createdAt) && (
+                                                <p className="text-[10px] text-muted-foreground/50 font-bold uppercase tracking-wider">
+                                                    {new Date(project.created_date || project.createdAt).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' })}
+                                                </p>
+                                            )}
+                                            <p className="text-[11px] text-muted-foreground/60 font-medium italic line-clamp-1">
+                                                Created by {project.created_by}
+                                            </p>
+                                        </div>
+                                        {project.description && (
+                                            <p 
+                                                className="text-xs text-muted-foreground/80 font-medium line-clamp-3"
+                                                title={project.description}
+                                            >
+                                                {project.description}
+                                            </p>
+                                        )}
                                     </div>
 
-                                    <div className="flex items-center justify-between mt-8">
+                                    <div className="flex items-center justify-between mt-6">
                                         <div className="flex -space-x-4">
                                             {project.members?.slice(0, 5).map((member, i) => {
                                                 const avatarUrl = `/domo/avatars/v2/USER/${member.id}`;
